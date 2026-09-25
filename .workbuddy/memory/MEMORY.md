@@ -36,7 +36,7 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
   踢回 Tab 页（实测过）。
 - 新增/换风格必须过 `AppStyle.selfCheck()`（色表齐全 + 不透明 + 对比度 ≥4.5:1），
   它在 `MainActivity.onCreate` 开头调用，不达标直接崩是**预期行为**。
-- 风格自检共 8 个 `selfCheck`（原 7 个 + AppStyle）。
+- 风格自检共 10 个 `selfCheck`（原 7 个 + AppStyle + TraeUpstream 模型表解析 + ModelsRepo 模型表）。
 
 ## 视觉语言（2026-09-24 第二轮深化）
 
@@ -69,6 +69,41 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
   登记成句柄（如 `quotaApply`），刷新前后各调一次。
   ⚠️ 试过"记住 scrollY 再滚回去"，**不可靠**（新 ScrollView 未量完高度，`scrollTo` 会被夹回 0）。
 - 需要"原地更新"的值控件，用 `metricOf(label, valueView)`（值控件由调用方持有）。
+
+## 版本与打包（2026-09-24）
+
+- 版本号：`app/build.gradle.kts` 的 `versionName` = **0.3.0** / `versionCode` = 3。
+  **唯一来源就是这一处**；界面显示的版本号走 `PackageManager` 自动跟随，不用改 UI 代码。
+- 打包：工程根 `.\build-apk.ps1` → `out\TraeWork2API-<versionName>-debug.apk`（`out/` 已 gitignore）。
+  脚本用正则从 `build.gradle.kts` 读版本号，**别在脚本里写死**。
+- ⚠️ **`build-apk.ps1` 必须保持全英文注释**：本机 `powershell.exe` 是 **5.1**（Desktop），
+  它按 **GBK** 读 `.ps1`，UTF-8 中文会被拆成破坏引号的字节 → **语法报错、脚本跑不起来**
+  （实测踩过）。中文说明放 `docs\` / `CHANGELOG.md`。
+- 判断"版本号是否真进包"用 `aapt2 dump badging <apk>`，别只看脚本输出。
+
+## 模型表（2026-09-25 起可变）
+
+- `ModelsRepo` 由「不可变静态清单」改为「**静态兜底 + 可选动态表**」：
+  `current()` **永远非空**（没刷过/刷失败/未登录都回静态表 12 个）。
+- **空表绝不允许覆盖**（`applyFetched` 的 `length() > 0` 闸）——
+  `/v1/models` 与模型 Tab 都读它，空数组会让**所有客户端看不到任何模型**。
+  有 `ModelsRepo.selfCheck()` 钉住（故意改坏过，确认自检真能抓到）。
+- **不做持久化**：重启回静态表。`DEFAULT_MODE` 不跟动态表变（仍是 `DeepSeek-V4-Flash`）。
+- 🔴 **上游 `function` 必须是 `solo_work_remote`**（原 `solo_work_lite`）：
+  新模型（`deepseek-v4.1-flash`/`glm-5.3`/`step-5-preview`）**只挂在这个 function 下**，
+  用老的打它们一律 `4001`。旧模型在新 function 下实测无回归 —— 别改回去。
+- 上游表 49 项要过滤掉三类：非聊天项（`custom_model_*`、`summary`、`*_agent`）、
+  **用户自己接入的第三方 API 模型**、上游标 `is_invisible_to_user` 的内部项。
+  🔴 **判据必须用上游字段，不能猜名字**：`config_source==1`（**3=用户接入的第三方**）
+  且 `display_config.is_custom_model!=true` 且 `is_invisible_to_user!=true`。
+  第三方模型名字跟官方**一模一样**（`mistral-small-4`/`glm-4.5-air`），黑名单挡不住（第一版就栽在这）。
+  过滤后 **15 个**。
+- ⚠️ `Doubao-Seed-Evolving` 是官方内置可见、但**会员专属**，非会员调用 `4001`。
+  上游表**没有**"本账号是否有权用"的字段，所以它留在列表里 —— **别把 4001 当"模型不可用"。**
+- ⚠️ `glm-5`/`glm-5-turbo`/`DeepSeek-V4-Flash`/`DeepSeek-V4-Pro` 上游标了不可见 →
+  刷新后消失、**重启回静态表又出现**（静态兜底 vs 上游真表的固有差异）。
+- 刷新按钮**必须原地更新**（`modelsRefreshApply` 句柄），不能 `render()`/`redraw()`（会丢搜索框+滚动位）；
+  重塞卡片后**必须重跑 `applyFilter()`**，否则搜索作用在失效旧 View 上。
 
 ## 验证方法（模拟器）
 
