@@ -73,7 +73,7 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
 
 ## 版本与打包（2026-09-24）
 
-- 版本号：`app/build.gradle.kts` 的 `versionName` = **0.4.1** / `versionCode` = 5。
+- 版本号：`app/build.gradle.kts` 的 `versionName` = **0.4.2** / `versionCode` = 6。
   **唯一来源就是这一处**；界面显示的版本号走 `PackageManager` 自动跟随，不用改 UI 代码。
 - 打包：工程根 `.\build-apk.ps1` → `out\TraeWork2API-<versionName>-debug.apk`（`out/` 已 gitignore）。
   脚本用正则从 `build.gradle.kts` 读版本号，**别在脚本里写死**。
@@ -94,6 +94,15 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
 - 只有国服能签到（`region.canQueryQuota`）；国际服必然失败。
 - ⚠️ 「今日签到」显示 `—` 的根因是**从不自动加载**（不是解析错）：
   账号页首次渲染才 `refreshQuota()`，三个缓存都 null 时触发一次。
+
+## 通知栏图标（2026-09-25 修）
+
+- 前台服务通知的小图标在 `GatewayService.notification()`，**必须纯白剪影**：
+  系统只取 alpha 通道自己染色，给彩色/带底色的图标会糊成实心方块。
+- 现在用 `R.drawable.ic_launcher_foreground`（白箭头 + 透明底），**复用**，不新增 drawable。
+- ⚠️ 别用 `android.R.drawable.*` 当 App 通知图标 —— 那是系统图标，换 App 图标它永远不变
+  （用户报的 bug 就是这个）。同理别用 `@mipmap/ic_launcher`（靛蓝底）。
+- 验证手法：`dumpsys notification --noredact | grep icon=Icon` 看 `pkg=` 是不是自己的包名。
 
 ## 模型表（2026-09-25 起可变）
 
