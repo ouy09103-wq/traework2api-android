@@ -37,6 +37,7 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
 - 新增/换风格必须过 `AppStyle.selfCheck()`（色表齐全 + 不透明 + 对比度 ≥4.5:1），
   它在 `MainActivity.onCreate` 开头调用，不达标直接崩是**预期行为**。
 - 风格自检共 10 个 `selfCheck`（原 7 个 + AppStyle + TraeUpstream 模型表解析 + ModelsRepo 模型表）。
+  签到解析复用 `TraeUpstream.selfCheck`（fixture 用真账号 status 原文）。
 
 ## 视觉语言（2026-09-24 第二轮深化）
 
@@ -72,7 +73,7 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
 
 ## 版本与打包（2026-09-24）
 
-- 版本号：`app/build.gradle.kts` 的 `versionName` = **0.3.0** / `versionCode` = 3。
+- 版本号：`app/build.gradle.kts` 的 `versionName` = **0.4.0** / `versionCode` = 4。
   **唯一来源就是这一处**；界面显示的版本号走 `PackageManager` 自动跟随，不用改 UI 代码。
 - 打包：工程根 `.\build-apk.ps1` → `out\TraeWork2API-<versionName>-debug.apk`（`out/` 已 gitignore）。
   脚本用正则从 `build.gradle.kts` 读版本号，**别在脚本里写死**。
@@ -80,6 +81,19 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
   它按 **GBK** 读 `.ps1`，UTF-8 中文会被拆成破坏引号的字节 → **语法报错、脚本跑不起来**
   （实测踩过）。中文说明放 `docs\` / `CHANGELOG.md`。
 - 判断"版本号是否真进包"用 `aapt2 dump badging <apk>`，别只看脚本输出。
+
+## 签到（2026-09-25 起）
+
+- 上游两个端点：`/trae/api/v2/ug/checkin_credits/status`（只读）与 `.../claim`（签到）。
+- 🔴 **实测推翻 GitHub `L0NE-6/Trae-AutoCheckin`**：已签时 claim 回 **`code=9004`（不是 9095）**；
+  body `{}` 与 `{"req_source":1}`、带不带设备头**返回一字不差** → **不需要 req_source / 设备号**。
+- 真 status 字段：`checked_in` / `code` / `credits` / `did_checked_in` / `enable` / `extra_credits` / `message`。
+- **顺序必须 status → 未签且 enable 才 claim**（reference `scheduler.go:100`），绝不盲发。
+- 重复 claim **不扣积分、不改坏状态**（已复测），但白发请求；所以 `checkedIn=true` 时按钮**置灰**。
+- `9004` 的英文 message **别透传**给用户，映射成「今日已签到」。
+- 只有国服能签到（`region.canQueryQuota`）；国际服必然失败。
+- ⚠️ 「今日签到」显示 `—` 的根因是**从不自动加载**（不是解析错）：
+  账号页首次渲染才 `refreshQuota()`，三个缓存都 null 时触发一次。
 
 ## 模型表（2026-09-25 起可变）
 
