@@ -73,7 +73,7 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
 
 ## 版本与打包（2026-09-24）
 
-- 版本号：`app/build.gradle.kts` 的 `versionName` = **0.4.0** / `versionCode` = 4。
+- 版本号：`app/build.gradle.kts` 的 `versionName` = **0.4.1** / `versionCode` = 5。
   **唯一来源就是这一处**；界面显示的版本号走 `PackageManager` 自动跟随，不用改 UI 代码。
 - 打包：工程根 `.\build-apk.ps1` → `out\TraeWork2API-<versionName>-debug.apk`（`out/` 已 gitignore）。
   脚本用正则从 `build.gradle.kts` 读版本号，**别在脚本里写死**。
