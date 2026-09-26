@@ -73,7 +73,7 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
 
 ## 版本与打包（2026-09-24）
 
-- 版本号：`app/build.gradle.kts` 的 `versionName` = **0.4.2** / `versionCode` = 6。
+- 版本号：`app/build.gradle.kts` 的 `versionName` = **0.4.3** / `versionCode` = 7。
   **唯一来源就是这一处**；界面显示的版本号走 `PackageManager` 自动跟随，不用改 UI 代码。
 - 打包：工程根 `.\build-apk.ps1` → `out\TraeWork2API-<versionName>-debug.apk`（`out/` 已 gitignore）。
   脚本用正则从 `build.gradle.kts` 读版本号，**别在脚本里写死**。
@@ -106,8 +106,17 @@ Trae 本地 OpenAI 兼容 API 网关的安卓 App（本地 8788 端口）。Kotl
 
 ## 模型表（2026-09-25 起可变）
 
+> 🔴 **0.4.3 起：没有静态兜底清单了。** `ModelsRepo` 只有上游表，
+> `current()` 未刷新时返回**空数组**（合法状态，不是故障）。
+> 模型 Tab 默认「模型目录尚未加载」空状态，逼用户点「刷新模型目录」。
+> `/v1/models` 未刷新时 `/v1/models` → `{"object":"list","data":[]}`，这是设计意图。
+> `applyFetched` 的 `length() > 0` 护栏**保留**（防"已刷出的表被失败刷新清空"）。
+> 仍然**不持久化**：重启回空状态（用户明确要"刷最新"，不要"离线缓存"）。
+> 删静态表顺带修掉旧毛病：`glm-5` 等 invisible 模型以前"刷新后消失、重启又冒出来"。
+
 - `ModelsRepo` 由「不可变静态清单」改为「**静态兜底 + 可选动态表**」：
   `current()` **永远非空**（没刷过/刷失败/未登录都回静态表 12 个）。
+  ⚠️ **0.4.3 已推翻**：静态清单整个删了，见下节。
 - **空表绝不允许覆盖**（`applyFetched` 的 `length() > 0` 闸）——
   `/v1/models` 与模型 Tab 都读它，空数组会让**所有客户端看不到任何模型**。
   有 `ModelsRepo.selfCheck()` 钉住（故意改坏过，确认自检真能抓到）。
